@@ -153,6 +153,11 @@ func listenPacketAndHandle(conn net.PacketConn, message string) {
 		data := buf[:size]
 		log.Println("Received Raw UDP Data:", data)
 		log.Printf("Received UDP Data (converted to string): %s", data)
+		_, err = conn.WriteTo(data, addr)
+		if err != nil {
+			log.Println("Echo write error:", err)
+			continue
+		}
 		continue
 	}
 
@@ -222,6 +227,10 @@ func handleTCPRequest(conn net.Conn, message string) {
 
 		log.Println(clientId+" - Received Raw Data:", data)
 		log.Printf(clientId+" - Received Data (converted to string): %s", data)
+		_, err = conn.Write(data)
+		if err != nil {
+			log.Println("could not write data", err)
+		}
 	}
 }
 
