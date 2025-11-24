@@ -39,7 +39,7 @@ spec:
         app: echo
     spec:
       containers:
-      - image: kong/go-echo:latest
+      - image: ghcr.io/yctf-org/go-echo:latest
         name: echo
         ports:
         - containerPort: 1025

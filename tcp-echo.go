@@ -3,6 +3,7 @@ package main
 import (
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -12,6 +13,15 @@ import (
 
 	uuid "github.com/google/uuid"
 )
+
+type Response struct {
+	NodeName           string
+	PodName            string
+	PodNamespace       string
+	PodIP              string
+	ServiceAccountName string
+	Flag               string
+}
 
 func main() {
 
@@ -29,12 +39,6 @@ func main() {
 		httpPort = "1027"
 	}
 
-	nodeName := os.Getenv("NODE_NAME")
-	podName := os.Getenv("POD_NAME")
-	podNamespace := os.Getenv("POD_NAMESPACE")
-	podIP := os.Getenv("POD_IP")
-	serviceAccountName := os.Getenv("SERVICE_ACCOUNT")
-
 	tlsPort := os.Getenv("TLS_PORT")
 	tlsCACertFile := os.Getenv("TLS_CA_CERT_FILE")
 	tlsCertFile := os.Getenv("TLS_CERT_FILE")
@@ -45,27 +49,15 @@ func main() {
 		log.Panicln("HTTPS_PORT is set but TLS_CERT_FILE or TLS_KEY_FILE is not set.")
 	}
 
-	message := ""
-
-	if nodeName != "" {
-		message = message + fmt.Sprintf("Welcome, you are connected to node %s.\n", nodeName)
-	}
-
-	if podName != "" {
-		message = message + fmt.Sprintf("Running on Pod %s.\n", podName)
-	}
-
-	if podNamespace != "" {
-		message = message + fmt.Sprintf("In namespace %s.\n", podNamespace)
-	}
-
-	if podIP != "" {
-		message = message + fmt.Sprintf("With IP address %s.\n", podIP)
-	}
-
-	if serviceAccountName != "" {
-		message = message + fmt.Sprintf("Service account %s.\n", serviceAccountName)
-	}
+	response, _ := json.Marshal(Response{
+		NodeName:           os.Getenv("NODE_NAME"),
+		PodName:            os.Getenv("POD_NAME"),
+		PodNamespace:       os.Getenv("POD_NAMESPACE"),
+		PodIP:              os.Getenv("POD_IP"),
+		ServiceAccountName: os.Getenv("SERVICE_ACCOUNT"),
+		Flag:               os.Getenv("FLAG"),
+	})
+	message := string(response)
 
 	// spawn a TLS server if TLS_PORT, TLS_CERT_FILE, TLS_KEY_FILE are set.
 	// append CA cert from TLS_CA_CERT_FILE if set.
@@ -77,9 +69,8 @@ func main() {
 			log.Panicln(err)
 		}
 
-		tlsMsg := message + "Through TLS connection.\n"
 		log.Println("Listening on TLS port", tlsPort)
-		go listenAndHandle(tlsListener, tlsMsg)
+		go listenAndHandle(tlsListener, message)
 	}
 
 	// spawn a UDP server
@@ -110,7 +101,7 @@ func main() {
 
 	// spawn an optional HTTPS server
 	if httpsPort != "" {
-		httpsHandler := generateHTTPHandler(message + "Through HTTPS connection.\n")
+		httpsHandler := generateHTTPHandler(message)
 		httpsServer := &http.Server{
 			Addr:    ":" + httpsPort,
 			Handler: http.HandlerFunc(httpsHandler),
@@ -162,11 +153,6 @@ func listenPacketAndHandle(conn net.PacketConn, message string) {
 		data := buf[:size]
 		log.Println("Received Raw UDP Data:", data)
 		log.Printf("Received UDP Data (converted to string): %s", data)
-		_, err = conn.WriteTo(data, addr)
-		if err != nil {
-			log.Println("Echo write error:", err)
-			continue
-		}
 		continue
 	}
 
@@ -210,12 +196,6 @@ func generateHTTPHandler(message string) func(w http.ResponseWriter, r *http.Req
 			http.Error(w, fmt.Sprintf("could not write data: %s", err), http.StatusInternalServerError)
 			return
 		}
-		_, err = io.WriteString(w, string(body)+"\n")
-		if err != nil {
-			log.Println("could not write data", err)
-			http.Error(w, fmt.Sprintf("could not write data: %s", err), http.StatusInternalServerError)
-			return
-		}
 	}
 }
 
@@ -242,10 +222,6 @@ func handleTCPRequest(conn net.Conn, message string) {
 
 		log.Println(clientId+" - Received Raw Data:", data)
 		log.Printf(clientId+" - Received Data (converted to string): %s", data)
-		_, err = conn.Write(data)
-		if err != nil {
-			log.Println("could not write data", err)
-		}
 	}
 }
 

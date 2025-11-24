@@ -19,7 +19,7 @@ spec:
     spec:
       containers:
       - name: tcp-echo-container
-        image: kong/go-echo
+        image: ghcr.io/yctf-org/go-echo
         imagePullPolicy: Always
         env:
         - name: TCP_PORT

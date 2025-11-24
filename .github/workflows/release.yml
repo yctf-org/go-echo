@@ -7,6 +7,7 @@ on:  # yamllint disable-line rule:truthy
 
 permissions:
   contents: read
+  packages: write
 
 jobs:
   release:
@@ -31,14 +32,15 @@ jobs:
       id: meta
       uses: docker/metadata-action@902fa8ec7d6ecbf8d84d538b9b233a880e428804 # v5
       with:
-        images: kong/go-echo
+        images: ghcr.io/yctf-org/go-echo
         tags: |
           type=semver,pattern={{version}},value=${{ steps.tag.outputs.tag }}
-    - name: Login to DockerHub
+    - name: Login to GitHub Container Registry
       uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3
       with:
-        username: ${{ secrets.DOCKERHUB_USERNAME }}
-        password: ${{ secrets.DOCKERHUB_PUSH_TOKEN }}
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
     - name: Build & Push
       uses: docker/bake-action@4a9a8d494466d37134e2bfca2d3a8de8fb2681ad # v5
       with:

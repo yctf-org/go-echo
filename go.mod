@@ -1,4 +1,4 @@
-module github.com/kong/go-echo
+module github.com/yctf-org/go-echo
 
 go 1.18
 
